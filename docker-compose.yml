@@ -1,0 +1,68 @@
+version: '3'
+
+networks:
+  webapp:
+
+volumes:
+  volgusmariadb:
+
+services:
+  nginx:
+    image: nginx:stable-alpine
+    container_name: ${APP_NAME}_nginx
+    ports:
+      - 7007:80
+    volumes:
+      - ./:/var/www/html
+      - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:rw
+    depends_on:
+      - php
+      - mariadb
+    networks:
+      - webapp
+
+  php:
+    build:
+      context: ./docker
+      dockerfile: php.dockerfile
+    image: voipgus/meuphp
+    container_name: ${APP_NAME}_php
+    volumes:
+      - ./:/var/www/html
+    ports:
+      - 9019:9000
+    networks:
+      - webapp
+
+
+  mariadb:
+    #image: mysql:8.0
+    image: mariadb:latest
+    container_name: ${APP_NAME}_mariadb
+    restart: unless-stopped
+    tty: true
+    ports:
+      - 3325:3306
+    volumes:
+      - volgusmariadb:/var/lib/mysql/data
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+    networks:
+      - webapp
+
+        
+  npm:
+    image: node:13.7
+    container_name: ${APP_NAME}_npm
+    volumes:
+      - ./:/var/www/html
+    ports:
+      - 3044:3000
+ 
+    working_dir: /var/www/html
+    entrypoint: ['npm','install']
+    networks:
+      - webapp
